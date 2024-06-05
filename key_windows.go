@@ -39,11 +39,20 @@ func readConInputs(ctx context.Context, msgsch chan<- Msg, con windows.Handle) e
 				}
 
 				for i := 0; i < int(e.RepeatCount); i++ {
-					msgs = append(msgs, KeyMsg{
-						Type:  keyType(e),
-						Runes: []rune{e.Char},
-						Alt:   e.ControlKeyState.Contains(coninput.LEFT_ALT_PRESSED | coninput.RIGHT_ALT_PRESSED),
-					})
+					eventKeyType := keyType(e)
+					msg := KeyMsg{
+						Type: eventKeyType,
+						Alt:  e.ControlKeyState.Contains(coninput.LEFT_ALT_PRESSED | coninput.RIGHT_ALT_PRESSED),
+					}
+
+					// readAnsiInputs doesn't send Runes on a message when the input matches
+					// a sequence. Let's keep that behavior here, too.
+					// TODO: Determine if other keys present similar issues
+					if eventKeyType != KeyEnter {
+						msg.Runes = []rune{e.Char}
+					}
+
+					msgs = append(msgs, msg)
 				}
 			case coninput.WindowBufferSizeEventRecord:
 				if e != ws {
